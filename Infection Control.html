@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nurse Infection Adventure</title>
+<style>
+  body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #e0f7fa; }
+  #gameCanvas { background-color: #ffffff; display: block; margin: 0 auto; }
+  #score { position: absolute; top: 10px; left: 10px; font-size: 24px; color: #00796b; }
+  #level { position: absolute; top: 10px; right: 10px; font-size: 24px; color: #00796b; }
+  #message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+             font-size: 48px; color: #ff6f00; display: none; }
+</style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<div id="level">Level: 1</div>
+<div id="message">⭐ Level Complete! ⭐</div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Game variables
+let score = 0;
+let level = 1;
+let gameOver = false;
+
+// Nurse character
+const nurse = {
+  x: 400,
+  y: 500,
+  width: 60,
+  height: 80,
+  color: '#ff4081'
+};
+
+// Tools (green = correct)
+const tools = [
+  {x: 100, y: 100, width: 50, height: 50, color: 'green', type: 'mask'},
+  {x: 300, y: 150, width: 50, height: 50, color: 'green', type: 'gloves'},
+  {x: 500, y: 100, width: 50, height: 50, color: 'green', type: 'soap'},
+  {x: 700, y: 150, width: 50, height: 50, color: 'green', type: 'disinfect'}
+];
+
+// Viruses (red = dangerous)
+let viruses = [];
+function createViruses(n, speedMultiplier=1){
+  viruses = [];
+  for(let i=0;i<n;i++){
+    viruses.push({
+      x: Math.random()*750,
+      y: Math.random()*200,
+      width: 40,
+      height: 40,
+      color: 'red',
+      dx: (Math.random()*2 + 1)*speedMultiplier*(Math.random() < 0.5 ? 1 : -1),
+      dy: (Math.random()*2 + 1)*speedMultiplier
+    });
+  }
+}
+
+// Draw function
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // Draw nurse
+  ctx.fillStyle = nurse.color;
+  ctx.fillRect(nurse.x, nurse.y, nurse.width, nurse.height);
+  // Draw tools
+  tools.forEach(tool => {
+    ctx.fillStyle = tool.color;
+    ctx.fillRect(tool.x, tool.y, tool.width, tool.height);
+  });
+  // Draw viruses
+  viruses.forEach(v => {
+    ctx.fillStyle = v.color;
+    ctx.beginPath();
+    ctx.arc(v.x+v.width/2, v.y+v.height/2, v.width/2, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+// Update function
+function update(){
+  viruses.forEach(v => {
+    v.x += v.dx;
+    v.y += v.dy;
+    if(v.x<0 || v.x+v.width>canvas.width) v.dx*=-1;
+    if(v.y<0 || v.y+v.height>canvas.height/2) v.dy*=-1;
+  });
+  draw();
+  if(!gameOver) requestAnimationFrame(update);
+}
+
+// Handle clicks
+canvas.addEventListener('click', function(e){
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  let clickedTool = tools.find(t => mouseX>t.x && mouseX<t.x+t.width && mouseY>t.y && mouseY<t.y+t.height);
+  if(clickedTool){
+    score += 10;
+    document.getElementById('score').innerText = "Score: " + score;
+  }
+  let clickedVirus = viruses.find(v => mouseX>v.x && mouseX<v.x+v.width && mouseY>v.y && mouseY<v.y+v.height);
+  if(clickedVirus){
+    score -= 5;
+    document.getElementById('score').innerText = "Score: " + score;
+  }
+  // Check if level complete (score threshold)
+  if(score >= level*50){
+    showLevelComplete();
+  }
+});
+
+// Level complete message and next level
+function showLevelComplete(){
+  gameOver = true;
+  document.getElementById('message').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('message').style.display = 'none';
+    nextLevel();
+  }, 2000);
+}
+
+function nextLevel(){
+  level++;
+  if(level>3){
+    alert("🎉 Congratulations! You completed all levels! Total Score: " + score);
+    level = 1;
+    score = 0;
+  }
+  document.getElementById('level').innerText = "Level: " + level;
+  document.getElementById('score').innerText = "Score: " + score;
+  gameOver = false;
+  // Adjust virus count and speed per level
+  if(level==1) createViruses(5,1);
+  else if(level==2) createViruses(10,1.5);
+  else createViruses(15,2);
+  update();
+}
+
+// Initialize first level
+createViruses(5,1);
+update();
+</script>
+</body>
+</html>
